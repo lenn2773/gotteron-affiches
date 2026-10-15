@@ -1,4 +1,3 @@
-
 name: Affiches Gottéron
 
 on:
@@ -16,6 +15,4 @@ jobs:
       - name: Vérifier l'heure et lancer le test
         run: |
           echo "Vérification quotidienne de Gottéron"
-          TZ=Europe/Zurich date
-          echo "Prochaine étape : récupérer les résultats et générer l'affiche."
-
+          TZ=Europe/Z
