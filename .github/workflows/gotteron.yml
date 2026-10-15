@@ -1,1 +1,21 @@
 
+name: Affiches Gottéron
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier l'heure et lancer le test
+        run: |
+          echo "Vérification quotidienne de Gottéron"
+          TZ=Europe/Zurich date
+          echo "Prochaine étape : récupérer les résultats et générer l'affiche."
+
