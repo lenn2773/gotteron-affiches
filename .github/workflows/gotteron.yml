@@ -1,9 +1,12 @@
-name: Affiches Gottéron 
+
+name: Affiches Gottéron
 
 'on':
+  push:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: '0 9 * * *'
   workflow_dispatch:
+
 
 permissions:
   contents: write
