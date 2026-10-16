@@ -7,15 +7,20 @@ name: Affiches Gottéron
     - cron: '0 9 * * *'
   workflow_dispatch:
 
-
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verification:
     runs-on: ubuntu-latest
     steps:
-      - name: Vérifier l'heure et lancer le test
-        run: |
-          echo "Vérification quotidienne de Gottéron"
-          TZ=Europe/Z
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Lancer le programme
+        run: python main.py
