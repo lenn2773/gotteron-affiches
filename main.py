@@ -37,4 +37,4 @@ try:
         print("Balise :", unescape(tag)[:300])
 
 except Exception as error:
-    print("Erreur :", error)
+    print
