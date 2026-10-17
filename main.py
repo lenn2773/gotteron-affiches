@@ -1,33 +1,46 @@
 
 import urllib.request
+from html.parser import HTMLParser
+from html import unescape
 import re
 
-url = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
+URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
 
-req = urllib.request.Request(
-    url,
-    headers={
-        "User-Agent": "Mozilla/5.0",
-        "HX-Request": "true",
-        "HX-Current-URL": url,
-    },
-)
+class MatchParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.matches = []
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if "c-game-preview" in a.get("class", ""):
+            home = a.get("data-home-club-id", "")
+            away = a.get("data-away-club-id", "")
+            game = a.get("data-game-id", "")
+            if "103138" in (home, away) and game:
+                self.matches.append(game)
 
 try:
+    req = urllib.request.Request(URL, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=30) as r:
         html = r.read().decode("utf-8", errors="replace")
 
-    print("Réponse :", len(html), "caractères")
+    p = MatchParser()
+    p.feed(html)
+    ids = list(dict.fromkeys(p.matches))
 
-    for mot in ["Fribourg-Gottéron", "c-game-preview", "data-home-team", "score"]:
-        print(mot, ":", len(re.findall(mot, html, re.I)))
+    print("Matchs de Gottéron trouvés :", len(ids))
 
-    pos = html.find("c-game-preview")
-    if pos >= 0:
-        print("\nExtrait :")
-        print(re.sub(r"\s+", " ", html[pos:pos+700]))
+    if ids:
+        match_url = "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get?gameId=" + ids[0] + "&displayStyle=simple&leagueColor="
+        req = urllib.request.Request(match_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            resultat = r.read().decode("utf-8", errors="replace")
+        texte = re.sub(r"<[^>]+>", " ", resultat)
+        texte = re.sub(r"\s+", " ", unescape(texte)).strip()
+        print("Réponse du match :", texte[:700])
     else:
-        print("Aucun bloc de match détecté.")
+        print("Aucun identifiant de match trouvé.")
 
 except Exception as e:
     print("Erreur :", e)
