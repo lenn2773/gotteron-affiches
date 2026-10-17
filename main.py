@@ -1,11 +1,66 @@
 
 import urllib.request
-import re
+from html.parser import HTMLParser
 from html import unescape
+import re
 
 URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
 
-try:
+
+class MatchParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.matches = []
+        self.current = None
+        self.depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+
+        if tag == "div":
+            classes = attrs.get("class", "")
+
+            if self.current is None and "c-game-preview" in classes.split():
+                home = attrs.get("data-home-club-id", "")
+                away = attrs.get("data-away-club-id", "")
+                game = attrs.get("data-game-id", "")
+
+                if "103138" in (home, away) and game:
+                    self.current = {
+                        "id": game,
+                        "home": home,
+                        "away": away,
+                        "text": [],
+                    }
+                    self.depth = 1
+                    return
+
+            elif self.current is not None:
+                self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag == "div" and self.current is not None:
+            self.depth -= 1
+
+            if self.depth == 0:
+                text = re.sub(
+                    r"\s+",
+                    " ",
+                    unescape(" ".join(self.current["text"]))
+                ).strip()
+
+                self.current["text"] = text
+                self.matches.append(self.current)
+                self.current = None
+
+    def handle_data(self, data):
+        if self.current is not None:
+            data = data.strip()
+            if data:
+                self.current["text"].append(data)
+
+
+def main():
     request = urllib.request.Request(
         URL,
         headers={"User-Agent": "Mozilla/5.0"}
@@ -14,29 +69,25 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         html = response.read().decode("utf-8", errors="replace")
 
-    # Repère les cartes de match et leurs informations.
-    positions = [
-        m.start()
-        for m in re.finditer(r'class="[^"]*c-game-preview', html)
-    ]
+    parser = MatchParser()
+    parser.feed(html)
 
-    print("Cartes de match trouvées :", len(positions))
+    # Évite d'afficher plusieurs fois le même match.
+    unique = {}
+    for match in parser.matches:
+        unique[match["id"]] = match
 
-    for i, position in enumerate(positions[:3], start=1):
-        extrait = html[position:position + 5000]
+    print("Matchs uniques de Gottéron :", len(unique))
 
-        game_id = re.search(r'data-game-id="([^"]+)"', extrait)
-        home_id = re.search(r'data-home-club-id="([^"]+)"', extrait)
-        away_id = re.search(r'data-away-club-id="([^"]+)"', extrait)
+    for match in list(unique.values())[:10]:
+        print("\nID :", match["id"])
+        print("Domicile :", match["home"])
+        print("Extérieur :", match["away"])
+        print("Informations :", match["text"][:350])
 
-        texte = re.sub(r"<[^>]+>", " ", extrait)
-        texte = re.sub(r"\s+", " ", unescape(texte)).strip()
 
-        print(f"\nCarte {i}")
-        print("ID match :", game_id.group(1) if game_id else "inconnu")
-        print("ID domicile :", home_id.group(1) if home_id else "inconnu")
-        print("ID extérieur :", away_id.group(1) if away_id else "inconnu")
-        print("Texte :", texte[:500])
-
-except Exception as error:
-    print("Erreur :", error)
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as error:
+        print("Erreur :", error)
