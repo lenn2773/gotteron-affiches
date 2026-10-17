@@ -1,45 +1,69 @@
 
 import urllib.request
+from html.parser import HTMLParser
+from html import unescape
 import re
 
-URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
+PAGE_URL = (
+    "https://www.sihf.ch/fr/game-center/equipe/"
+    "calendrier-des-matchs/1-1-103138"
+)
+
+
+class TextParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+
+    def handle_data(self, data):
+        data = data.strip()
+        if data:
+            self.parts.append(data)
+
+
+def fetch(url, referer=None):
+    headers = {"User-Agent": "Mozilla/5.0", "HX-Request": "true"}
+    if referer:
+        headers["Referer"] = referer
+
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read().decode("utf-8", errors="replace")
+
 
 try:
-    request = urllib.request.Request(
-        URL,
-        headers={"User-Agent": "Mozilla/5.0"}
-    )
+    page = fetch(PAGE_URL)
 
-    with urllib.request.urlopen(request, timeout=30) as response:
-        html = response.read().decode("utf-8", errors="replace")
+    ids = list(dict.fromkeys(
+        re.findall(r'data-game-id="([^"]+)"', page)
+    ))
 
-    match = re.search(r'data-game-id="([^"]+)"', html)
+    print("Matchs trouvés :", len(ids))
 
-    if not match:
+    if not ids:
         print("Aucun match trouvé.")
     else:
-        game_id = match.group(1)
+        game_id = ids[0]
         print("Match testé :", game_id)
 
-        match_url = (
+        url = (
             "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get"
             f"?gameId={game_id}&displayStyle=simple&leagueColor="
         )
 
-        request = urllib.request.Request(
-            match_url,
-            headers={
-                "User-Agent": "Mozilla/5.0",
-                "Referer": URL,
-                "HX-Request": "true",
-            }
-        )
+        html = fetch(url, PAGE_URL)
 
-        with urllib.request.urlopen(request, timeout=30) as response:
-            resultat = response.read().decode("utf-8", errors="replace")
-            print("Code HTTP :", response.status)
-            print("Réponse du serveur :")
-            print(re.sub(r"\s+", " ", resultat)[:1500])
+        parser = TextParser()
+        parser.feed(html)
+
+        texte = re.sub(
+            r"\s+",
+            " ",
+            unescape(" ".join(parser.parts))
+        ).strip()
+
+        print("Informations du match :")
+        print(texte[:1200])
 
 except Exception as error:
     print("Erreur :", error)
