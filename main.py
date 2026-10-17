@@ -1,6 +1,7 @@
 
 import urllib.request
 import re
+from datetime import datetime
 
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
@@ -13,24 +14,28 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    for terme in [
-        "matches-block-results",
-        "team-page-results",
-        "data-testid",
-        "eventRow",
-    ]:
-        print(f"\n========== {terme} ==========")
+    debut = page.find('cjs.initialFeeds["results"]')
 
-        positions = [
-            match.start()
-            for match in re.finditer(re.escape(terme), page, re.IGNORECASE)
-        ]
+    if debut == -1:
+        print("Flux des résultats introuvable.")
+    else:
+        extrait = page[debut:debut + 250000]
 
-        print("Occurrences :", len(positions))
+        matchs = re.findall(
+            r'AA÷([^¬]+).*?AD÷([^¬]+).*?'
+            r'AE÷([^¬]+).*?AF÷([^¬]+).*?'
+            r'AG÷([^¬]+).*?AH÷([^¬]+)',
+            extrait
+        )
 
-        for position in positions[:2]:
-            print(page[max(0, position - 300):position + 900])
-            print("\n---")
+        print("Matchs trouvés :", len(matchs))
+        print("\nPremiers résultats :")
+
+        for identifiant, date, equipe1, equipe2, score1, score2 in matchs[:15]:
+            print(
+                f"ID={identifiant} | Date={date} | "
+                f"{equipe1} - {equipe2} | {score1}-{score2}"
+            )
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
