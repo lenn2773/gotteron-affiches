@@ -32,7 +32,8 @@ try:
     print("Matchs de Gottéron trouvés :", len(ids))
 
     if ids:
-        match_url = "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get?gameId=" + ids[0] + "&displayStyle=simple&leagueColor="
+        from urllib.parse import quote
+match_url = "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get?gameId=" + quote(ids[0]) + "&displayStyle=simple&leagueColor="
         req = urllib.request.Request(match_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=30) as r:
             resultat = r.read().decode("utf-8", errors="replace")
