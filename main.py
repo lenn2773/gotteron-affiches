@@ -2,68 +2,63 @@
 import urllib.request
 from html.parser import HTMLParser
 from html import unescape
-import re
 
-PAGE_URL = (
-    "https://www.sihf.ch/fr/game-center/equipe/"
-    "calendrier-des-matchs/1-1-103138"
-)
+URL = "https://www.gotteron.ch/fr/Principale/Calendrier-et-resultats"
 
 
-class TextParser(HTMLParser):
+class LinkParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.parts = []
+        self.links = []
+        self.current = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            attrs = dict(attrs)
+            self.current = {
+                "url": attrs.get("href", ""),
+                "text": []
+            }
 
     def handle_data(self, data):
-        data = data.strip()
-        if data:
-            self.parts.append(data)
+        if self.current is not None:
+            self.current["text"].append(data.strip())
 
-
-def fetch(url, referer=None):
-    headers = {"User-Agent": "Mozilla/5.0", "HX-Request": "true"}
-    if referer:
-        headers["Referer"] = referer
-
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return response.read().decode("utf-8", errors="replace")
+    def handle_endtag(self, tag):
+        if tag == "a" and self.current is not None:
+            text = " ".join(
+                part for part in self.current["text"] if part
+            )
+            self.links.append({
+                "url": self.current["url"],
+                "text": text
+            })
+            self.current = None
 
 
 try:
-    page = fetch(PAGE_URL)
+    request = urllib.request.Request(
+        URL,
+        headers={"User-Agent": "Mozilla/5.0"}
+    )
 
-    ids = list(dict.fromkeys(
-        re.findall(r'data-game-id="([^"]+)"', page)
-    ))
+    with urllib.request.urlopen(request, timeout=30) as response:
+        html = response.read().decode("utf-8", errors="replace")
+        print("Code HTTP :", response.status)
 
-    print("Matchs trouvés :", len(ids))
+    parser = LinkParser()
+    parser.feed(html)
 
-    if not ids:
-        print("Aucun match trouvé.")
-    else:
-        game_id = ids[0]
-        print("Match testé :", game_id)
+    reports = [
+        link for link in parser.links
+        if "compte-rendu" in unescape(link["text"]).lower()
+    ]
 
-        url = (
-            "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get"
-            f"?gameId={game_id}&displayStyle=simple&leagueColor="
-        )
+    print("Liens de comptes rendus trouvés :", len(reports))
 
-        html = fetch(url, PAGE_URL)
-
-        parser = TextParser()
-        parser.feed(html)
-
-        texte = re.sub(
-            r"\s+",
-            " ",
-            unescape(" ".join(parser.parts))
-        ).strip()
-
-        print("Informations du match :")
-        print(texte[:1200])
+    for report in reports[:10]:
+        print("\nTitre :", report["text"])
+        print("Lien :", report["url"])
 
 except Exception as error:
     print("Erreur :", error)
