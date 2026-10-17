@@ -11,12 +11,7 @@ req = urllib.request.Request(
 with urllib.request.urlopen(req, timeout=30) as r:
     js = r.read().decode("utf-8", errors="replace")
 
-print("Fichier chargé :", len(js), "caractères")
+for mot in ["firebaseConfig", "getDatabase", "getDocs", "collection(", "GamesCalendarComponent"]:
+    m = re.search(re.escape(mot), js)
+    print(f"{mot} :", js[max(0, m.start()-100):m.start()+250] if m else "absent")
 
-for mot in ["api/", "/api", "gamecenter", "game-center", "calendar", "fixtures"]:
-    positions = [m.start() for m in re.finditer(re.escape(mot), js, re.I)]
-    print(f"\n{mot} : {len(positions)} occurrence(s)")
-    for pos in positions[:2]:
-        print(js[max(0, pos-100):pos+220])
-
-print("\nFin du diagnostic.")
