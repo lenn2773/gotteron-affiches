@@ -4,24 +4,19 @@ import re
 
 url = "https://www.sihf.ch/scripts/game-center.js"
 
-try:
-    req = urllib.request.Request(
-        url, headers={"User-Agent": "Mozilla/5.0"}
-    )
-    with urllib.request.urlopen(req, timeout=20) as r:
-        js = r.read().decode("utf-8", errors="replace")
+req = urllib.request.Request(
+    url, headers={"User-Agent": "Mozilla/5.0"}
+)
 
-    print("Fichier récupéré :", len(js), "caractères")
-    lignes = [
-        x.strip() for x in js.splitlines()
-        if re.search(r"api|ajax|fetch|calendar|match|game", x, re.I)
-    ]
+with urllib.request.urlopen(req, timeout=30) as r:
+    js = r.read().decode("utf-8", errors="replace")
 
-    for ligne in lignes[:10]:
-        print(ligne[:220])
+print("Fichier chargé :", len(js), "caractères")
 
-    if not lignes:
-        print("Aucune ligne utile trouvée.")
+for mot in ["api/", "/api", "gamecenter", "game-center", "calendar", "fixtures"]:
+    positions = [m.start() for m in re.finditer(re.escape(mot), js, re.I)]
+    print(f"\n{mot} : {len(positions)} occurrence(s)")
+    for pos in positions[:2]:
+        print(js[max(0, pos-100):pos+220])
 
-except Exception as e:
-    print("Erreur :", e)
+print("\nFin du diagnostic.")
