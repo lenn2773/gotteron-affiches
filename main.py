@@ -1,66 +1,11 @@
 
 import urllib.request
-from html.parser import HTMLParser
-from html import unescape
 import re
+from html import unescape
 
 URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
 
-
-class MatchParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.matches = []
-        self.current = None
-        self.depth = 0
-
-    def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-
-        if tag == "div":
-            classes = attrs.get("class", "")
-
-            if self.current is None and "c-game-preview" in classes.split():
-                home = attrs.get("data-home-club-id", "")
-                away = attrs.get("data-away-club-id", "")
-                game = attrs.get("data-game-id", "")
-
-                if "103138" in (home, away) and game:
-                    self.current = {
-                        "id": game,
-                        "home": home,
-                        "away": away,
-                        "text": [],
-                    }
-                    self.depth = 1
-                    return
-
-            elif self.current is not None:
-                self.depth += 1
-
-    def handle_endtag(self, tag):
-        if tag == "div" and self.current is not None:
-            self.depth -= 1
-
-            if self.depth == 0:
-                text = re.sub(
-                    r"\s+",
-                    " ",
-                    unescape(" ".join(self.current["text"]))
-                ).strip()
-
-                self.current["text"] = text
-                self.matches.append(self.current)
-                self.current = None
-
-    def handle_data(self, data):
-        if self.current is not None:
-            data = data.strip()
-            if data:
-                self.current["text"].append(data)
-
-
-def main():
+try:
     request = urllib.request.Request(
         URL,
         headers={"User-Agent": "Mozilla/5.0"}
@@ -69,25 +14,27 @@ def main():
     with urllib.request.urlopen(request, timeout=30) as response:
         html = response.read().decode("utf-8", errors="replace")
 
-    parser = MatchParser()
-    parser.feed(html)
+    # Recherche les balises qui contiennent directement les identifiants.
+    pattern = re.compile(
+        r'<[^>]+data-game-id="([^"]+)"[^>]*data-home-club-id="([^"]+)"[^>]*data-away-club-id="([^"]+)"[^>]*>',
+        re.DOTALL
+    )
 
-    # Évite d'afficher plusieurs fois le même match.
-    unique = {}
-    for match in parser.matches:
-        unique[match["id"]] = match
+    matches = {}
 
-    print("Matchs uniques de Gottéron :", len(unique))
+    for match in pattern.finditer(html):
+        game_id, home, away = match.groups()
 
-    for match in list(unique.values())[:10]:
-        print("\nID :", match["id"])
-        print("Domicile :", match["home"])
-        print("Extérieur :", match["away"])
-        print("Informations :", match["text"][:350])
+        if "103138" in (home, away):
+            matches[game_id] = (home, away, match.group(0))
 
+    print("Matchs uniques de Gottéron :", len(matches))
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as error:
-        print("Erreur :", error)
+    for game_id, (home, away, tag) in list(matches.items())[:10]:
+        print("\nID :", game_id)
+        print("Domicile :", home)
+        print("Extérieur :", away)
+        print("Balise :", unescape(tag)[:300])
+
+except Exception as error:
+    print("Erreur :", error)
