@@ -1,10 +1,10 @@
 
+import json
 import urllib.request
-import re
 
-URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
+URL = "https://www.sihf.ch"
 
-print("Recherche des résultats de Fribourg-Gottéron...")
+print("Recherche des données de Gottéron...")
 
 try:
     request = urllib.request.Request(
@@ -13,17 +13,12 @@ try:
     )
 
     with urllib.request.urlopen(request, timeout=20) as response:
-        page = response.read().decode("utf-8", errors="replace")
+        print("Code de réponse du site :", response.status)
+        page = response.read(5000).decode("utf-8", errors="replace")
 
-    texte = re.sub(r"<[^>]+>", " ", page)
-    texte = re.sub(r"\s+", " ", texte)
-
-    if "Fribourg-Gottéron" in texte:
-        print("Le site de la SIHF est accessible.")
-        print("Des informations sur Gottéron ont été trouvées.")
-        print("Extrait :", texte[:1500])
-    else:
-        print("Le site répond, mais les résultats n'ont pas été détectés.")
+    print("Connexion au site réussie.")
+    print("Début de la réponse :")
+    print(page[:1000])
 
 except Exception as erreur:
-    print("Impossible de récupérer les données :", erreur)
+    print("Erreur de connexion :", erreur)
