@@ -1,7 +1,6 @@
 
 import urllib.request
 import re
-from html import unescape
 
 URL = "https://www.sihf.ch/fr/game-center/equipe/calendrier-des-matchs/1-1-103138"
 
@@ -14,27 +13,33 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         html = response.read().decode("utf-8", errors="replace")
 
-    # Recherche les balises qui contiennent directement les identifiants.
-    pattern = re.compile(
-        r'<[^>]+data-game-id="([^"]+)"[^>]*data-home-club-id="([^"]+)"[^>]*data-away-club-id="([^"]+)"[^>]*>',
-        re.DOTALL
-    )
+    match = re.search(r'data-game-id="([^"]+)"', html)
 
-    matches = {}
+    if not match:
+        print("Aucun match trouvé.")
+    else:
+        game_id = match.group(1)
+        print("Match testé :", game_id)
 
-    for match in pattern.finditer(html):
-        game_id, home, away = match.groups()
+        match_url = (
+            "https://www.sihf.ch/umbraco/GameCenter/GameShort/Get"
+            f"?gameId={game_id}&displayStyle=simple&leagueColor="
+        )
 
-        if "103138" in (home, away):
-            matches[game_id] = (home, away, match.group(0))
+        request = urllib.request.Request(
+            match_url,
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": URL,
+                "HX-Request": "true",
+            }
+        )
 
-    print("Matchs uniques de Gottéron :", len(matches))
-
-    for game_id, (home, away, tag) in list(matches.items())[:10]:
-        print("\nID :", game_id)
-        print("Domicile :", home)
-        print("Extérieur :", away)
-        print("Balise :", unescape(tag)[:300])
+        with urllib.request.urlopen(request, timeout=30) as response:
+            resultat = response.read().decode("utf-8", errors="replace")
+            print("Code HTTP :", response.status)
+            print("Réponse du serveur :")
+            print(re.sub(r"\s+", " ", resultat)[:1500])
 
 except Exception as error:
-    print
+    print("Erreur :", error)
