@@ -14,20 +14,29 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         html = response.read().decode("utf-8", errors="replace")
 
-    # Cherche les identifiants des matchs dans le HTML.
-    ids = re.findall(r'data-game-id="([^"]+)"', html)
+    # Repère les cartes de match et leurs informations.
+    positions = [
+        m.start()
+        for m in re.finditer(r'class="[^"]*c-game-preview', html)
+    ]
 
-    print("Nombre d'identifiants trouvés :", len(ids))
-    print("Premiers identifiants :", ids[:5])
+    print("Cartes de match trouvées :", len(positions))
 
-    # Affiche un extrait autour du premier identifiant.
-    if ids:
-        position = html.find(ids[0])
-        extrait = html[max(0, position - 500):position + 1000]
-        extrait = re.sub(r"<[^>]+>", " ", extrait)
-        extrait = re.sub(r"\s+", " ", unescape(extrait)).strip()
-        print("\nExtrait du premier match :")
-        print(extrait[:800])
+    for i, position in enumerate(positions[:3], start=1):
+        extrait = html[position:position + 5000]
+
+        game_id = re.search(r'data-game-id="([^"]+)"', extrait)
+        home_id = re.search(r'data-home-club-id="([^"]+)"', extrait)
+        away_id = re.search(r'data-away-club-id="([^"]+)"', extrait)
+
+        texte = re.sub(r"<[^>]+>", " ", extrait)
+        texte = re.sub(r"\s+", " ", unescape(texte)).strip()
+
+        print(f"\nCarte {i}")
+        print("ID match :", game_id.group(1) if game_id else "inconnu")
+        print("ID domicile :", home_id.group(1) if home_id else "inconnu")
+        print("ID extérieur :", away_id.group(1) if away_id else "inconnu")
+        print("Texte :", texte[:500])
 
 except Exception as error:
     print("Erreur :", error)
