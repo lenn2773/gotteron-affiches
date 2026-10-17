@@ -14,29 +14,23 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    # Repérer les identifiants de matchs Flashscore
-    ids = list(dict.fromkeys(re.findall(
-        r'data-event-id=["\']([^"\']+)["\']',
-        page
-    )))
+    print("Page récupérée :", len(page), "caractères")
 
-    print("Nombre de matchs repérés :", len(ids))
-    print("\nPremiers identifiants :")
-
-    for identifiant in ids[:15]:
-        print(identifiant)
-
-    # Repérer les liens vers les détails des matchs
-    liens = list(dict.fromkeys(re.findall(
-        r'href=["\']([^"\']*(?:match|spiel|game)[^"\']*)["\']',
+    # Chercher les classes HTML liées aux matchs
+    classes = re.findall(
+        r'class=["\']([^"\']*(?:event|match|participant|score)[^"\']*)["\']',
         page,
         re.IGNORECASE
-    )))
+    )
 
-    print("\nLiens possibles vers les matchs :")
+    print("\nClasses liées aux matchs :")
+    for classe in list(dict.fromkeys(classes))[:35]:
+        print(classe)
 
-    for lien in liens[:15]:
-        print(html.unescape(lien))
+    # Chercher les occurrences du nom de Gottéron
+    for terme in ["Fribourg-Gottéron", "Fribourg", "result"]:
+        print(f"\nOccurrences de {terme} :",
+              len(re.findall(re.escape(terme), page, re.IGNORECASE)))
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
