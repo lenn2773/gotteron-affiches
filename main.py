@@ -1,6 +1,7 @@
 
 import urllib.request
-from html.parser import HTMLParser
+import re
+import html
 
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
@@ -14,19 +15,23 @@ request = urllib.request.Request(
 
 try:
     with urllib.request.urlopen(request, timeout=30) as response:
-        html = response.read().decode("utf-8", errors="replace")
+        page = response.read().decode("utf-8", errors="replace")
 
-    print("TEST FLASHSCORE")
-    print("Page récupérée :", len(html), "caractères")
+    print("Page récupérée :", len(page), "caractères")
 
-    for mot in ["Schmid", "Sörensen", "goal", "scorer", "event"]:
-        print(f"{mot} :", mot.lower() in html.lower())
+    for terme in ["Schmid", "goalServe", "incident", "participant", "event"]:
+        positions = [m.start() for m in re.finditer(
+            re.escape(terme), page, re.IGNORECASE
+        )]
 
-    with open("flashscore_test.html", "w", encoding="utf-8") as fichier:
-        fichier.write(html)
+        print(f"\n--- {terme} : {len(positions)} occurrences ---")
 
-    print("Page enregistrée dans flashscore_test.html")
-    print("TEST TERMINÉ")
+        for position in positions[:2]:
+            extrait = page[max(0, position - 250):position + 500]
+            extrait = html.unescape(extrait)
+            print(extrait.replace("\n", " ")[:750])
+
+    print("\nTEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
