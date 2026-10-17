@@ -1,24 +1,25 @@
-
-import re
 import urllib.request
 from html.parser import HTMLParser
+import re
 
-URL = "https://www.sihf.ch"
+URL = (
+    "https://www.sihf.ch/fr/game-center/"
+    "equipe/calendrier-des-matchs/1-1-103138"
+)
 
-class LiensParser(HTMLParser):
+
+class TexteParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.liens = []
+        self.textes = []
 
-    def handle_starttag(self, tag, attrs):
-        if tag == "a":
-            attrs = dict(attrs)
-            href = attrs.get("href", "")
-            texte = attrs.get("title", "")
-            if href:
-                self.liens.append((href, texte))
+    def handle_data(self, data):
+        texte = data.strip()
+        if texte:
+            self.textes.append(texte)
 
-print("Recherche des liens du site SIHF...")
+
+print("Lecture du calendrier officiel de Gottéron...")
 
 try:
     req = urllib.request.Request(
@@ -26,25 +27,34 @@ try:
         headers={"User-Agent": "Mozilla/5.0"}
     )
 
-    with urllib.request.urlopen(req, timeout=20) as reponse:
-        html = reponse.read().decode("utf-8", errors="replace")
+    with urllib.request.urlopen(req, timeout=30) as response:
+        html = response.read().decode(
+            "utf-8",
+            errors="replace"
+        )
 
-    parser = LiensParser()
+    parser = TexteParser()
     parser.feed(html)
 
-    mots = ("game", "match", "calendar", "kalender", "result", "spiel", "equipe")
+    texte = re.sub(
+        r"\s+",
+        " ",
+        " ".join(parser.textes)
+    )
 
-    trouves = set()
-    for href, titre in parser.liens:
-        if any(mot in (href + " " + titre).lower() for mot in mots):
-            trouves.add(href + " — " + titre)
+    print("Page récupérée :", len(html), "caractères")
 
-    if trouves:
-        print("Liens potentiellement utiles :")
-        for lien in sorted(trouves):
-            print(lien)
+    position = texte.find("Fribourg-Gottéron")
+
+    if position >= 0:
+        print("Extrait du calendrier :")
+        print(texte[position:position + 2500])
     else:
-        print("Aucun lien de calendrier détecté dans la page d'accueil.")
+        print(
+            "Les matchs ne sont pas visibles "
+            "dans le HTML reçu."
+        )
+        print("Début de la page :", texte[:500])
 
 except Exception as erreur:
     print("Erreur :", erreur)
