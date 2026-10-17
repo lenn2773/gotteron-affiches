@@ -1,7 +1,6 @@
 
 import urllib.request
 import re
-import html
 
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
@@ -14,23 +13,24 @@ try:
     with urllib.request.urlopen(request, timeout=30) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    print("Page récupérée :", len(page), "caractères")
+    for terme in [
+        "matches-block-results",
+        "team-page-results",
+        "data-testid",
+        "eventRow",
+    ]:
+        print(f"\n========== {terme} ==========")
 
-    # Chercher les classes HTML liées aux matchs
-    classes = re.findall(
-        r'class=["\']([^"\']*(?:event|match|participant|score)[^"\']*)["\']',
-        page,
-        re.IGNORECASE
-    )
+        positions = [
+            match.start()
+            for match in re.finditer(re.escape(terme), page, re.IGNORECASE)
+        ]
 
-    print("\nClasses liées aux matchs :")
-    for classe in list(dict.fromkeys(classes))[:35]:
-        print(classe)
+        print("Occurrences :", len(positions))
 
-    # Chercher les occurrences du nom de Gottéron
-    for terme in ["Fribourg-Gottéron", "Fribourg", "result"]:
-        print(f"\nOccurrences de {terme} :",
-              len(re.findall(re.escape(terme), page, re.IGNORECASE)))
+        for position in positions[:2]:
+            print(page[max(0, position - 300):position + 900])
+            print("\n---")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
