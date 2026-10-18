@@ -1,9 +1,8 @@
 
 import urllib.request
 import re
-from datetime import datetime, timezone
 
-URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
+URL = "https://www.flashscore.de/match/pIS547h5/"
 
 try:
     request = urllib.request.Request(
@@ -14,37 +13,21 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    marqueur = 'cjs.initialFeeds["results"]'
-    debut = page.find(marqueur)
-    debut = page.find("data: `", debut)
-    debut += len("data: `")
-    fin = page.find("`;", debut)
-    donnees = page[debut:fin]
+    print("Page récupérée :", len(page), "caractères")
 
-    print("Matchs de Gottéron :\n")
-
-    for bloc in donnees.split("¬~"):
-        champs = dict(
-            re.findall(r"(?:^|¬)([A-Z]+)÷([^¬]*)", bloc)
+    for terme in ["Sörensen", "Schmid", "goal", "scorer", "incident"]:
+        print(
+            f"{terme} :",
+            len(re.findall(re.escape(terme), page, re.IGNORECASE))
         )
 
-        domicile = champs.get("AE", "")
-        exterieur = champs.get("AF", "")
-        score_dom = champs.get("AG", "")
-        score_ext = champs.get("AH", "")
-        identifiant = champs.get("AA", "")
-        date = champs.get("AD", "")
+    for marqueur in ["initialFeeds", "detail", "event"]:
+        print(
+            f"{marqueur} présent :",
+            marqueur.lower() in page.lower()
+        )
 
-        if "Fribourg-Gottéron" in (domicile + exterieur):
-            if score_dom and score_ext:
-                print(
-                    f"ID: {identifiant} | "
-                    f"{domicile} {score_dom} - "
-                    f"{score_ext} {exterieur} | "
-                    f"Date: {date}"
-                )
-
-    print("\nTEST TERMINÉ")
+    print("TEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
