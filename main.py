@@ -13,16 +13,26 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    for identifiant in ["pIS547h5", "r9Y59gz2"]:
-        position = page.find(identifiant)
-        print(f"\n--- {identifiant} ---")
+    identifiant = "pIS547h5"
+    position = page.find(identifiant)
 
-        if position == -1:
-            print("Identifiant introuvable")
-        else:
-            print(page[max(0, position - 500):position + 1000])
+    if position == -1:
+        print("Match introuvable dans la page")
+    else:
+        debut = max(0, position - 3000)
+        fin = min(len(page), position + 3000)
+        extrait = page[debut:fin]
 
-    print("\nTEST TERMINÉ")
+        liens = re.findall(
+            r"""href=["']([^"']+)["']""",
+            extrait
+        )
+
+        for lien in liens:
+            if "match" in lien or "spiel" in lien:
+                print(lien)
+
+        print("\n--- FIN DU TEST ---")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
