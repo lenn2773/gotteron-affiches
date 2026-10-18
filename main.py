@@ -2,7 +2,7 @@
 import urllib.request
 import re
 
-URL = "https://www.flashscore.de/match/pIS547h5/"
+URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
 try:
     request = urllib.request.Request(
@@ -13,21 +13,16 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    print("Page récupérée :", len(page), "caractères")
+    for identifiant in ["pIS547h5", "r9Y59gz2"]:
+        position = page.find(identifiant)
+        print(f"\n--- {identifiant} ---")
 
-    for terme in ["Sörensen", "Schmid", "goal", "scorer", "incident"]:
-        print(
-            f"{terme} :",
-            len(re.findall(re.escape(terme), page, re.IGNORECASE))
-        )
+        if position == -1:
+            print("Identifiant introuvable")
+        else:
+            print(page[max(0, position - 500):position + 1000])
 
-    for marqueur in ["initialFeeds", "detail", "event"]:
-        print(
-            f"{marqueur} présent :",
-            marqueur.lower() in page.lower()
-        )
-
-    print("TEST TERMINÉ")
+    print("\nTEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
