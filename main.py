@@ -1,6 +1,7 @@
 
 import urllib.request
 import re
+from datetime import datetime, timezone
 
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
@@ -13,37 +14,37 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    print("Page récupérée :", len(page), "caractères")
-
     marqueur = 'cjs.initialFeeds["results"]'
     debut = page.find(marqueur)
+    debut = page.find("data: `", debut)
+    debut += len("data: `")
+    fin = page.find("`;", debut)
+    donnees = page[debut:fin]
 
-    if debut == -1:
-        print("Flux des résultats introuvable.")
-    else:
-        debut = page.find("data: `", debut)
+    print("Matchs de Gottéron :\n")
 
-        if debut == -1:
-            print("Données des résultats introuvables.")
-        else:
-            debut += len("data: `")
-            fin = page.find("`;", debut)
+    for bloc in donnees.split("¬~"):
+        champs = dict(
+            re.findall(r"(?:^|¬)([A-Z]+)÷([^¬]*)", bloc)
+        )
 
-            if fin == -1:
-                print("Fin des données introuvable.")
-            else:
-                donnees = page[debut:fin]
-                print("Données extraites :", len(donnees), "caractères")
+        domicile = champs.get("AE", "")
+        exterieur = champs.get("AF", "")
+        score_dom = champs.get("AG", "")
+        score_ext = champs.get("AH", "")
+        identifiant = champs.get("AA", "")
+        date = champs.get("AD", "")
 
-                blocs = donnees.split("¬~")
-                print("Blocs trouvés :", len(blocs))
-                print("\nExemples de blocs :")
+        if "Fribourg-Gottéron" in (domicile + exterieur):
+            if score_dom and score_ext:
+                print(
+                    f"ID: {identifiant} | "
+                    f"{domicile} {score_dom} - "
+                    f"{score_ext} {exterieur} | "
+                    f"Date: {date}"
+                )
 
-                for bloc in blocs[:5]:
-                    print(bloc[:500])
-                    print("---")
-
-    print("TEST TERMINÉ")
+    print("\nTEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
