@@ -1,41 +1,49 @@
 
 import urllib.request
 import re
-from datetime import datetime
 
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
-request = urllib.request.Request(
-    URL,
-    headers={"User-Agent": "Mozilla/5.0"}
-)
-
 try:
-    with urllib.request.urlopen(request, timeout=30) as response:
+    request = urllib.request.Request(
+        URL,
+        headers={"User-Agent": "Mozilla/5.0"}
+    )
+
+    with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    debut = page.find('cjs.initialFeeds["results"]')
+    print("Page récupérée :", len(page), "caractères")
+
+    marqueur = 'cjs.initialFeeds["results"]'
+    debut = page.find(marqueur)
 
     if debut == -1:
         print("Flux des résultats introuvable.")
     else:
-        extrait = page[debut:debut + 250000]
+        debut = page.find("data: `", debut)
 
-        matchs = re.findall(
-            r'AA÷([^¬]+).*?AD÷([^¬]+).*?'
-            r'AE÷([^¬]+).*?AF÷([^¬]+).*?'
-            r'AG÷([^¬]+).*?AH÷([^¬]+)',
-            extrait
-        )
+        if debut == -1:
+            print("Données des résultats introuvables.")
+        else:
+            debut += len("data: `")
+            fin = page.find("`;", debut)
 
-        print("Matchs trouvés :", len(matchs))
-        print("\nPremiers résultats :")
+            if fin == -1:
+                print("Fin des données introuvable.")
+            else:
+                donnees = page[debut:fin]
+                print("Données extraites :", len(donnees), "caractères")
 
-        for identifiant, date, equipe1, equipe2, score1, score2 in matchs[:15]:
-            print(
-                f"ID={identifiant} | Date={date} | "
-                f"{equipe1} - {equipe2} | {score1}-{score2}"
-            )
+                blocs = donnees.split("¬~")
+                print("Blocs trouvés :", len(blocs))
+                print("\nExemples de blocs :")
+
+                for bloc in blocs[:5]:
+                    print(bloc[:500])
+                    print("---")
+
+    print("TEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
