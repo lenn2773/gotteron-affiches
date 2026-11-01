@@ -1,22 +1,8 @@
 
 import urllib.request
-from html.parser import HTMLParser
+import re
 
-URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
-
-class LinkParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        if tag != "a":
-            return
-
-        attrs = dict(attrs)
-        href = attrs.get("href", "")
-        title = attrs.get("title", "")
-
-        if "r94HIWFD" in href or "spiele" in href.lower():
-            print("Lien :", href)
-            if title:
-                print("Titre :", title)
+URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/begegnungen/"
 
 try:
     request = urllib.request.Request(
@@ -27,8 +13,22 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    parser = LinkParser()
-    parser.feed(page)
+    print("Statut HTTP :", response.status)
+    print("Taille :", len(page))
+
+    feeds = re.findall(
+        r'cjs\.initialFeeds\["([^"]+)"\]\s*=\s*\{\s*data:\s*`(.*?)`',
+        page,
+        re.DOTALL
+    )
+
+    for name, data in feeds:
+        print("\nFlux trouvé :", name)
+        print("Nombre de matchs :", len(re.findall(r"(?:^|¬~)AA÷", data)))
+        print("Extrait :", data[:1000])
+
+    if not feeds:
+        print("Aucun flux de calendrier détecté.")
 
 except Exception as error:
     print("Erreur :", type(error).__name__, str(error))
