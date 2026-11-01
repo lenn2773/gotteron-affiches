@@ -13,29 +13,20 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    print("Page téléchargée :", len(page), "caractères")
-
-    mots = [
-        "pIS547h5",
-        "incident",
-        "event",
-        "goal",
-        "scorer",
-        "Sörensen",
-        "Schmid"
-    ]
-
-    for mot in mots:
+    for mot in ["pq_graphql", "initialFeeds", "detail", "event", "incident"]:
         positions = [
             m.start() for m in re.finditer(
                 re.escape(mot), page, re.IGNORECASE
             )
         ]
 
-        print(f"\n{mot} : {len(positions)} occurrence(s)")
+        print(f"\n--- {mot} : {len(positions)} occurrence(s) ---")
 
-        for pos in positions[:2]:
-            print(page[max(0, pos - 150):pos + 300])
+        for pos in positions[:3]:
+            print(page[max(0, pos - 250):pos + 500])
+            print()
+
+    print("TEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
