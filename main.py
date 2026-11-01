@@ -2,64 +2,40 @@
 import urllib.request
 import re
 
-MATCH_ID = "pIS547h5"
-
-url = (
-    "https://local-global.flashscore.ninja/"
-    f"2/x/feed/df_sui_2_{MATCH_ID}"
-)
+URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
 headers = {
-    "User-Agent": "Mozilla/5.0",
-    "x-fsign": "SW9D1eZo",
-    "Referer": "https://www.flashscore.com/",
-    "Origin": "https://www.flashscore.com",
-    "Accept": "*/*",
+    "User-Agent": "Mozilla/5.0"
 }
 
-def get_value(text, key):
-    match = re.search(
-        rf"(?:^|¬){key}÷([^¬~]*)",
-        text
-    )
-    return match.group(1) if match else ""
-
 try:
-    request = urllib.request.Request(url, headers=headers)
+    request = urllib.request.Request(URL, headers=headers)
 
     with urllib.request.urlopen(request, timeout=20) as response:
-        data = response.read().decode("utf-8")
+        page = response.read().decode("utf-8", errors="replace")
 
-    period = "Période inconnue"
+    print("Statut HTTP :", response.status)
+    print("Taille de la page :", len(page))
 
-    for part in data.split("~"):
-        if part.startswith("AC÷"):
-            period = part.replace("AC÷", "").strip()
+    match = re.search(
+        r'cjs\.initialFeeds\["results"\]\s*=\s*"([^"]*)"',
+        page
+    )
 
-        elif "IK÷Goal" in part:
-            team = get_value(part, "IA")
-            minute = get_value(part, "IB")
-            scorer = get_value(part, "IF")
+    if not match:
+        print("Flux des résultats introuvable.")
+    else:
+        feed = match.group(1)
+        feed = feed.replace("\\u00ac", "¬")
 
-            # Les noms des assistants suivent le buteur.
-            players = re.findall(
-                r"IF÷([^¬~]*)¬IU÷[^¬~]*¬ICT÷¬IK÷([^¬~]*)",
-                part
-            )
+        print("Flux trouvé !")
+        print("Identifiants de matchs détectés :",
+              len(re.findall(r"AA÷", feed)))
 
-            assists = [
-                name for name, role in players
-                if role.startswith("Assistance")
-            ]
-
-            print("--------------------------------")
-            print("Période :", period)
-            print("Équipe :", "Domicile" if team == "1" else "Extérieur")
-            print("Minute :", minute)
-            print("Buteur :", scorer)
-            print("Passeurs :", ", ".join(assists) if assists else "Aucun")
-
-    print("\nTEST TERMINÉ")
+        print("\nExtrait du flux :")
+        print(feed[:2500])
 
 except Exception as error:
     print("Erreur :", type(error).__name__, str(error))
+
+print("\nTEST TERMINÉ")
