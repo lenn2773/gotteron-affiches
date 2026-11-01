@@ -13,20 +13,18 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         page = response.read().decode("utf-8", errors="replace")
 
-    for mot in ["pq_graphql", "initialFeeds", "detail", "event", "incident"]:
-        positions = [
-            m.start() for m in re.finditer(
-                re.escape(mot), page, re.IGNORECASE
-            )
-        ]
+    scripts = re.findall(
+        r'<script[^>]+src=["\']([^"\']+)["\']',
+        page
+    )
 
-        print(f"\n--- {mot} : {len(positions)} occurrence(s) ---")
+    print("Nombre de scripts :", len(scripts))
 
-        for pos in positions[:3]:
-            print(page[max(0, pos - 250):pos + 500])
-            print()
+    for script in scripts:
+        if "detail" in script.lower() or "match" in script.lower():
+            print(script)
 
-    print("TEST TERMINÉ")
+    print("\nTEST TERMINÉ")
 
 except Exception as erreur:
     print("ERREUR :", type(erreur).__name__, str(erreur))
