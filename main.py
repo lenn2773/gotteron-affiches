@@ -1,22 +1,80 @@
-from PIL import Image
-import os
 
-for filename in ["logos/fribourg.png", "logos/geneve.png"]:
-    if not os.path.exists(filename):
-        print("Fichier introuvable :", filename)
+import urllib.request
+import re
+import os
+from PIL import Image
+
+TEAM_URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
+
+request = urllib.request.Request(
+    TEAM_URL,
+    headers={"User-Agent": "Mozilla/5.0"}
+)
+
+with urllib.request.urlopen(request, timeout=20) as response:
+    page = response.read().decode("utf-8", errors="replace")
+
+feed_match = re.search(
+    r'cjs\.initialFeeds\["results"\]\s*=\s*\{\s*data:\s*`(.*?)`',
+    page,
+    re.DOTALL
+)
+
+if not feed_match:
+    raise SystemExit("Flux des résultats introuvable.")
+
+feed = feed_match.group(1)
+
+def get_value(text, key):
+    match = re.search(rf"(?:^|¬){key}÷([^¬~]*)", text)
+    return match.group(1).strip() if match else ""
+
+match = re.search(
+    r"(?:^|¬~)AA÷2omdEcvK(.*?)(?=¬~AA÷|$)",
+    feed,
+    re.DOTALL
+)
+
+if not match:
+    raise SystemExit("Match de test introuvable.")
+
+record = match.group(1)
+
+logos = {
+    "fribourg": get_value(record, "OA"),
+    "geneve": get_value(record, "OB")
+}
+
+os.makedirs("logos", exist_ok=True)
+
+for team, filename in logos.items():
+    if not filename:
+        print("Logo manquant :", team)
         continue
 
-    try:
-        with Image.open(filename) as img:
-            img.verify()
+    url = "https://static.flashscore.com/res/image/data/" + filename
 
-        with Image.open(filename) as img:
-            print(filename)
-            print("Format :", img.format)
-            print("Dimensions :", img.size)
-            print("Image valide !")
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0"}
+    )
 
-    except Exception as error:
-        print("Erreur :", error)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        content = response.read()
+
+    path = os.path.join("logos", team + ".png")
+
+    with open(path, "wb") as file:
+        file.write(content)
+
+    print("\nLogo téléchargé :", team)
+
+    with Image.open(path) as img:
+        img.verify()
+
+    with Image.open(path) as img:
+        print("Format :", img.format)
+        print("Dimensions :", img.size)
+        print("Image valide !")
 
 print("\nTEST TERMINÉ")
