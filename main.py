@@ -2,68 +2,46 @@ import urllib.request
 import re
 
 BASE = "https://static.flashscore.com/res/_fs/build/"
+FICHIER = "FeedFetcherWithStatus.DYI27xv.js"
 
-FICHIERS = [
-    "hockey-detail.QRcARaG.js",
-    "FeedFetcherAbstract.l5uJmGG.js",
-    "DataProvider.DSxxxWP.js",
-    "api.C3suFwK.js",
-]
+try:
+    req = urllib.request.Request(
+        BASE + FICHIER,
+        headers={"User-Agent": "Mozilla/5.0"}
+    )
 
-MOTS = [
-    "incidents",
-    "goal",
-    "scorer",
-    "participant",
-    "graphql",
-    "pq_graphql",
-    "fetch(",
-]
+    with urllib.request.urlopen(req, timeout=20) as r:
+        contenu = r.read().decode("utf-8", errors="replace")
 
-for fichier in FICHIERS:
-    print("\n" + "=" * 60)
-    print("MODULE :", fichier)
+    print("Taille du module :", len(contenu))
 
-    try:
-        req = urllib.request.Request(
-            BASE + fichier,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        with urllib.request.urlopen(req, timeout=20) as r:
-            contenu = r.read().decode("utf-8", errors="replace")
+    mots = [
+        "fetch(",
+        "getUrl",
+        "feed",
+        "incidents",
+        "event",
+        "endpoint",
+        "pathPrefix",
+        "resolveFetchedData",
+        "x-fsign"
+    ]
 
-        deja_vus = set()
-        nombre = 0
+    for mot in mots:
+        positions = [
+            m.start()
+            for m in re.finditer(re.escape(mot), contenu, re.IGNORECASE)
+        ]
 
-        for mot in MOTS:
-            debut = 0
-            while True:
-                pos = contenu.lower().find(mot.lower(), debut)
-                if pos == -1:
-                    break
+        print(f"\n--- {mot} : {len(positions)} occurrence(s) ---")
 
-                debut = pos + len(mot)
-                gauche = max(0, pos - 250)
-                droite = min(len(contenu), pos + 450)
+        for pos in positions[:3]:
+            debut = max(0, pos - 350)
+            fin = min(len(contenu), pos + 650)
+            print(contenu[debut:fin])
+            print()
 
-                extrait = contenu[gauche:droite]
-                cle = extrait[:150]
+    print("TEST TERMINÉ")
 
-                if cle not in deja_vus:
-                    deja_vus.add(cle)
-                    print(f"\n--- Mot trouvé : {mot} ---")
-                    print(extrait)
-                    nombre += 1
-
-                if nombre >= 8:
-                    break
-
-            if nombre >= 8:
-                break
-
-        print("\nExtraits affichés :", nombre)
-
-    except Exception as erreur:
-        print("ERREUR :", erreur)
-
-print("\nTEST TERMINÉ")
+except Exception as erreur:
+    print("ERREUR :", type(erreur).__name__, str(erreur))
