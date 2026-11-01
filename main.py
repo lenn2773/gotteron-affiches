@@ -1,10 +1,11 @@
 import urllib.request
 import re
+import os
 
-URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
+TEAM_URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
 request = urllib.request.Request(
-    URL,
+    TEAM_URL,
     headers={"User-Agent": "Mozilla/5.0"}
 )
 
@@ -18,8 +19,7 @@ feed_match = re.search(
 )
 
 if not feed_match:
-    print("ERREUR : résultats introuvables.")
-    raise SystemExit
+    raise SystemExit("Flux des résultats introuvable.")
 
 feed = feed_match.group(1)
 
@@ -27,33 +27,54 @@ def get_value(text, key):
     match = re.search(rf"(?:^|¬){key}÷([^¬~]*)", text)
     return match.group(1).strip() if match else ""
 
-matches = re.finditer(
-    r"(?:^|¬~)AA÷([^¬~]+)(.*?)(?=¬~AA÷|$)",
+match = re.search(
+    r"(?:^|¬~)AA÷2omdEcvK(.*?)(?=¬~AA÷|$)",
     feed,
     re.DOTALL
 )
 
-for match in matches:
-    record = match.group(2)
+if not match:
+    raise SystemExit("Match de test introuvable.")
 
-    if "r94HIWFD" not in record:
+record = match.group(1)
+
+logos = {
+    "fribourg": get_value(record, "OA"),
+    "geneve": get_value(record, "OB")
+}
+
+os.makedirs("logos", exist_ok=True)
+
+for team, filename in logos.items():
+    if not filename:
+        print("Logo manquant :", team)
         continue
 
-    home = get_value(record, "AE")
-    away = get_value(record, "AF")
+    url = "https://static.flashscore.com/res/image/data/" + filename
 
-    home_logo = get_value(record, "OA")
-    away_logo = get_value(record, "OB")
+    try:
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
 
-    print("\nMATCH :", home, "-", away)
-    print("Logo domicile :", home_logo)
-    print("Logo extérieur :", away_logo)
+        with urllib.request.urlopen(request, timeout=20) as response:
+            content = response.read()
 
-    if home_logo and away_logo:
-        print("Résultat : les deux logos sont disponibles !")
-    else:
-        print("Résultat : il manque au moins un logo.")
+            if not response.headers.get("Content-Type", "").startswith("image/"):
+                print("Ce fichier n'est pas une image :", team)
+                continue
 
-    break
+        path = os.path.join("logos", team + ".png")
+
+        with open(path, "wb") as file:
+            file.write(content)
+
+        print("Logo téléchargé :", team)
+        print("Fichier :", path)
+        print("Taille :", len(content), "octets")
+
+    except Exception as error:
+        print("Erreur pour", team, ":", error)
 
 print("\nTEST TERMINÉ")
