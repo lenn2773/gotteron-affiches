@@ -1,36 +1,69 @@
-
 import urllib.request
 import re
 
-URL = "https://static.flashscore.com/res/_fs/build/detail.B0EdFI7.js"
+BASE = "https://static.flashscore.com/res/_fs/build/"
 
-try:
-    request = urllib.request.Request(
-        URL,
-        headers={"User-Agent": "Mozilla/5.0"}
-    )
+FICHIERS = [
+    "hockey-detail.QRcARaG.js",
+    "FeedFetcherAbstract.l5uJmGG.js",
+    "DataProvider.DSxxxWP.js",
+    "api.C3suFwK.js",
+]
 
-    with urllib.request.urlopen(request, timeout=20) as response:
-        script = response.read().decode("utf-8", errors="replace")
+MOTS = [
+    "incidents",
+    "goal",
+    "scorer",
+    "participant",
+    "graphql",
+    "pq_graphql",
+    "fetch(",
+]
 
-    fichiers = sorted(set(re.findall(
-        r'["\']([^"\']+\.js)["\']',
-        script
-    )))
+for fichier in FICHIERS:
+    print("\n" + "=" * 60)
+    print("MODULE :", fichier)
 
-    mots = [
-        "feed", "fetch", "api", "data",
-        "event", "incident", "match", "detail"
-    ]
+    try:
+        req = urllib.request.Request(
+            BASE + fichier,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            contenu = r.read().decode("utf-8", errors="replace")
 
-    print("Modules potentiellement intéressants :")
+        deja_vus = set()
+        nombre = 0
 
-    for fichier in fichiers:
-        if any(mot in fichier.lower() for mot in mots):
-            print(fichier)
+        for mot in MOTS:
+            debut = 0
+            while True:
+                pos = contenu.lower().find(mot.lower(), debut)
+                if pos == -1:
+                    break
 
-    print("\nNombre total de modules :", len(fichiers))
-    print("TEST TERMINÉ")
+                debut = pos + len(mot)
+                gauche = max(0, pos - 250)
+                droite = min(len(contenu), pos + 450)
 
-except Exception as erreur:
-    print("ERREUR :", type(erreur).__name__, str(erreur))
+                extrait = contenu[gauche:droite]
+                cle = extrait[:150]
+
+                if cle not in deja_vus:
+                    deja_vus.add(cle)
+                    print(f"\n--- Mot trouvé : {mot} ---")
+                    print(extrait)
+                    nombre += 1
+
+                if nombre >= 8:
+                    break
+
+            if nombre >= 8:
+                break
+
+        print("\nExtraits affichés :", nombre)
+
+    except Exception as erreur:
+        print("ERREUR :", erreur)
+
+print("\nTEST TERMINÉ")
