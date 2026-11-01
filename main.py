@@ -1,11 +1,6 @@
 import urllib.request
 import re
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
-TEAM_ID = "r94HIWFD"
-
-# 1. Récupérer les résultats de Gottéron
 URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
 
 request = urllib.request.Request(
@@ -28,122 +23,37 @@ if not feed_match:
 
 feed = feed_match.group(1)
 
-
 def get_value(text, key):
-    result = re.search(rf"(?:^|¬){key}÷([^¬~]*)", text)
-    return result.group(1).strip() if result else ""
+    match = re.search(rf"(?:^|¬){key}÷([^¬~]*)", text)
+    return match.group(1).strip() if match else ""
 
-
-# 2. Identifier les matchs terminés de Gottéron
 matches = re.finditer(
     r"(?:^|¬~)AA÷([^¬~]+)(.*?)(?=¬~AA÷|$)",
     feed,
     re.DOTALL
 )
 
-finished = []
-
 for match in matches:
-    match_id = match.group(1)
     record = match.group(2)
 
-    home_id = get_value(record, "PX")
-    away_id = get_value(record, "PY")
-
-    if TEAM_ID not in (home_id, away_id):
+    if "r94HIWFD" not in record:
         continue
 
-    timestamp = get_value(record, "AD")
-    home_score = get_value(record, "AG")
-    away_score = get_value(record, "AH")
+    home = get_value(record, "AE")
+    away = get_value(record, "AF")
 
-    if not timestamp or not home_score or not away_score:
-        continue
+    home_logo = get_value(record, "OA")
+    away_logo = get_value(record, "OB")
 
-    finished.append({
-        "id": match_id,
-        "timestamp": int(timestamp),
-        "home": get_value(record, "AE"),
-        "away": get_value(record, "AF"),
-        "home_score": home_score,
-        "away_score": away_score
-    })
+    print("\nMATCH :", home, "-", away)
+    print("Logo domicile :", home_logo)
+    print("Logo extérieur :", away_logo)
 
-if not finished:
-    print("Aucun match terminé trouvé.")
-    raise SystemExit
+    if home_logo and away_logo:
+        print("Résultat : les deux logos sont disponibles !")
+    else:
+        print("Résultat : il manque au moins un logo.")
 
-# 3. Prendre le plus récent
-latest = max(finished, key=lambda match: match["timestamp"])
-
-date = datetime.fromtimestamp(
-    latest["timestamp"],
-    ZoneInfo("Europe/Zurich")
-)
-
-print("DERNIER MATCH TERMINÉ DE GOTTÉRON")
-print("=" * 45)
-print("Date :", date.strftime("%d.%m.%Y à %H:%M"))
-print("Match :", latest["home"], "-", latest["away"])
-print("Score :", latest["home_score"], "-", latest["away_score"])
-print("Identifiant :", latest["id"])
-
-
-# 4. Récupérer les événements de ce match
-event_url = (
-    "https://local-global.flashscore.ninja/2/x/feed/df_sui_2_"
-    + latest["id"]
-)
-
-headers = {
-    "User-Agent": "Mozilla/5.0",
-    "x-fsign": "SW9D1eZo",
-    "Referer": "https://www.flashscore.com/",
-    "Origin": "https://www.flashscore.com/",
-    "Accept": "*/*"
-}
-
-request = urllib.request.Request(event_url, headers=headers)
-
-with urllib.request.urlopen(request, timeout=20) as response:
-    data = response.read().decode("utf-8", errors="replace")
-
-print("\nBUTEURS ET ASSISTS")
-print("=" * 45)
-
-period = ""
-
-for part in data.split("~"):
-
-    if part.startswith("AC÷"):
-        period = get_value(part, "AC")
-        continue
-
-    if get_value(part, "IK") != "Goal":
-        continue
-
-    team = get_value(part, "IA")
-    minute = get_value(part, "IB")
-    scorer = get_value(part, "IF")
-
-    players = re.findall(
-        r"IF÷([^¬~]*)¬IU÷[^¬~]*¬ICT÷¬IK÷([^¬~]*)",
-        part
-    )
-
-    assists = [
-        name for name, role in players
-        if role.startswith("Assistance")
-    ]
-
-    team_name = (
-        latest["home"] if team == "1"
-        else latest["away"]
-    )
-
-    print(f"\n{minute} - {period}")
-    print("Équipe :", team_name)
-    print("Buteur :", scorer)
-    print("Assists :", ", ".join(assists) if assists else "Aucune")
+    break
 
 print("\nTEST TERMINÉ")
