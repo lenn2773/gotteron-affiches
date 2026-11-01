@@ -22,5 +22,8 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Installer Pillow
+        run: pip install Pillow
+
       - name: Lancer le programme
         run: python main.py
