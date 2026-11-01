@@ -2,46 +2,53 @@ import urllib.request
 import re
 
 BASE = "https://static.flashscore.com/res/_fs/build/"
-FICHIER = "FeedFetcherWithStatus.DYI27xv.js"
 
-try:
+FICHIERS = [
+    "hockey-detail.QRcARaG.js",
+    "api.C3suFwK.js",
+    "FeedFetcherAbstract.l5uJmGG.js",
+]
+
+for fichier in FICHIERS:
+    print("\n" + "=" * 55)
+    print("MODULE :", fichier)
+
     req = urllib.request.Request(
-        BASE + FICHIER,
+        BASE + fichier,
         headers={"User-Agent": "Mozilla/5.0"}
     )
 
-    with urllib.request.urlopen(req, timeout=20) as r:
-        contenu = r.read().decode("utf-8", errors="replace")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            code = r.read().decode("utf-8", errors="replace")
 
-    print("Taille du module :", len(contenu))
+        modules = sorted(set(re.findall(
+            r'["\']([^"\']+\.js)["\']', code
+        )))
 
-    mots = [
-        "fetch(",
-        "getUrl",
-        "feed",
-        "incidents",
-        "event",
-        "endpoint",
-        "pathPrefix",
-        "resolveFetchedData",
-        "x-fsign"
-    ]
+        print("Modules importés :")
+        for module in modules:
+            print(" ", module)
 
-    for mot in mots:
-        positions = [
-            m.start()
-            for m in re.finditer(re.escape(mot), contenu, re.IGNORECASE)
-        ]
+        print("\nMots-clés de configuration :")
+        for mot in [
+            "feed_resolver",
+            "url_prefix",
+            "feed_sign",
+            "project",
+            "Api.config",
+            "incident"
+        ]:
+            positions = [
+                m.start()
+                for m in re.finditer(re.escape(mot), code, re.I)
+            ]
+            if positions:
+                print(f"\n{mot} : {len(positions)} occurrence(s)")
+                for pos in positions[:2]:
+                    print(code[max(0, pos-250):pos+500])
 
-        print(f"\n--- {mot} : {len(positions)} occurrence(s) ---")
+    except Exception as e:
+        print("ERREUR :", e)
 
-        for pos in positions[:3]:
-            debut = max(0, pos - 350)
-            fin = min(len(contenu), pos + 650)
-            print(contenu[debut:fin])
-            print()
-
-    print("TEST TERMINÉ")
-
-except Exception as erreur:
-    print("ERREUR :", type(erreur).__name__, str(erreur))
+print("\nTEST TERMINÉ")
