@@ -1,73 +1,61 @@
 import urllib.request
 import re
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
-URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/begegnungen/"
+MATCH_ID = "pIS547h5"
 
-request = urllib.request.Request(
-    URL,
-    headers={"User-Agent": "Mozilla/5.0"}
-)
+URL = f"https://local-global.flashscore.ninja/2/x/feed/df_sui_2_{MATCH_ID}"
+
+headers = {
+    "User-Agent": "Mozilla/5.0",
+    "x-fsign": "SW9D1eZo",
+    "Referer": "https://www.flashscore.com/",
+    "Origin": "https://www.flashscore.com",
+    "Accept": "*/*"
+}
+
+request = urllib.request.Request(URL, headers=headers)
 
 with urllib.request.urlopen(request, timeout=20) as response:
-    page = response.read().decode("utf-8", errors="replace")
+    data = response.read().decode("utf-8", errors="replace")
 
-match = re.search(
-    r'cjs\.initialFeeds\["fixtures"\]\s*=\s*\{\s*data:\s*`(.*?)`',
-    page,
-    re.DOTALL
-)
+def get_value(text, key):
+    match = re.search(rf"(?:^|¬){key}÷([^¬~]*)", text)
+    return match.group(1).strip() if match else ""
 
-if not match:
-    print("ERREUR : flux des matchs à venir introuvable.")
-    raise SystemExit
-
-feed = match.group(1)
-
-def get_value(record, key):
-    result = re.search(rf"(?:^|¬){key}÷([^¬~]*)", record)
-    return result.group(1) if result else ""
-
-print("CALENDRIER DE FRIBOURG-GOTTÉRON")
+print("ÉVÉNEMENTS : ZURICH 5–4 FRIBOURG")
 print("=" * 45)
 
-count = 0
-league = ""
+period = ""
 
-for record in feed.split("¬~"):
-    if get_value(record, "ZA"):
-        league = get_value(record, "ZA")
+for part in data.split("~"):
 
-    match_id = get_value(record, "AA")
-    if not match_id:
+    if part.startswith("AC÷"):
+        period = get_value(part, "AC")
         continue
 
-    home_id = get_value(record, "PX")
-    away_id = get_value(record, "PY")
-
-    if home_id != "r94HIWFD" and away_id != "r94HIWFD":
+    if get_value(part, "IK") != "Goal":
         continue
 
-    timestamp = get_value(record, "AD")
-    home = get_value(record, "AE")
-    away = get_value(record, "AF")
+    team = get_value(part, "IA")
+    minute = get_value(part, "IB")
+    scorer = get_value(part, "IF")
 
-    if not timestamp:
-        continue
-
-    date = datetime.fromtimestamp(
-        int(timestamp),
-        ZoneInfo("Europe/Zurich")
+    players = re.findall(
+        r"IF÷([^¬~]*)¬IU÷[^¬~]*¬ICT÷¬IK÷([^¬~]*)",
+        part
     )
 
-    print(f"{date:%d.%m.%Y à %H:%M}")
-    print(f"{home} - {away}")
-    print(f"Compétition : {league}")
-    print(f"Identifiant : {match_id}")
-    print("-" * 45)
+    assists = [
+        name for name, role in players
+        if role.startswith("Assistance")
+    ]
 
-    count += 1
+    team_name = "Zürich" if team == "1" else "Fribourg"
 
-print(f"\nTotal : {count} matchs trouvés.")
-print("TEST TERMINÉ")
+    print(f"\nPériode : {period}")
+    print(f"Minute : {minute}")
+    print(f"Équipe : {team_name}")
+    print(f"Buteur : {scorer}")
+    print("Assists :", ", ".join(assists) if assists else "Aucune")
+
+print("\nTEST TERMINÉ")
