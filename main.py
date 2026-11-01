@@ -13,21 +13,23 @@ try:
     with urllib.request.urlopen(request, timeout=20) as response:
         script = response.read().decode("utf-8", errors="replace")
 
-    print("Taille du script :", len(script))
+    fichiers = sorted(set(re.findall(
+        r'["\']([^"\']+\.js)["\']',
+        script
+    )))
 
-    for mot in ["pq_graphql", "incidents", "event", "goal", "detail"]:
-        positions = [
-            m.start() for m in re.finditer(
-                re.escape(mot), script, re.IGNORECASE
-            )
-        ]
+    mots = [
+        "feed", "fetch", "api", "data",
+        "event", "incident", "match", "detail"
+    ]
 
-        print(f"\n--- {mot} : {len(positions)} occurrence(s) ---")
+    print("Modules potentiellement intéressants :")
 
-        for pos in positions[:2]:
-            print(script[max(0, pos - 200):pos + 400])
-            print()
+    for fichier in fichiers:
+        if any(mot in fichier.lower() for mot in mots):
+            print(fichier)
 
+    print("\nNombre total de modules :", len(fichiers))
     print("TEST TERMINÉ")
 
 except Exception as erreur:
