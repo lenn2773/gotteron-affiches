@@ -1,31 +1,21 @@
 import urllib.request
-import re
 
-BASE = "https://static.flashscore.com/res/_fs/build/"
+URL = "https://www.flashscore.com/x/feed/df_team_1_"
 
-FICHIERS = [
-    "EventIncidentTypeList.CFYVND3.js",
-    "schemas.BARhQst.js",
-    "setServerTimeFromResponse.Cpqbm3X.js",
-]
+headers = {
+    "User-Agent": "Mozilla/5.0",
+    "x-fsign": "000000"
+}
 
-for fichier in FICHIERS:
-    print("\n" + "=" * 55)
-    print("MODULE :", fichier)
+try:
+    req = urllib.request.Request(URL, headers=headers)
 
-    try:
-        req = urllib.request.Request(
-            BASE + fichier,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
+    with urllib.request.urlopen(req, timeout=20) as r:
+        print("Statut HTTP :", r.status)
+        print("Réponse :")
+        print(r.read(2000).decode("utf-8", errors="replace"))
 
-        with urllib.request.urlopen(req, timeout=20) as r:
-            code = r.read().decode("utf-8", errors="replace")
-
-        print("Taille :", len(code))
-        print(code[:7000])
-
-    except Exception as erreur:
-        print("ERREUR :", erreur)
+except Exception as e:
+    print("Erreur :", type(e).__name__, str(e))
 
 print("\nTEST TERMINÉ")
