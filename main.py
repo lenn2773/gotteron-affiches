@@ -2,7 +2,7 @@
 import urllib.request
 import re
 
-URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/ergebnisse/"
+URL = "https://www.flashscore.de/team/hc-fribourg-gotteron/r94HIWFD/spiele/"
 
 try:
     request = urllib.request.Request(
