@@ -4,15 +4,16 @@ name: Affiches Gottéron
 'on':
   push:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  verification:
+  generation:
     runs-on: ubuntu-latest
+
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
@@ -22,8 +23,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Installer Pillow
+      - name: Installer les dépendances
         run: pip install Pillow
 
-      - name: Lancer le programme
+      - name: Générer l'affiche
         run: python main.py
+
+      - name: Publier l'affiche
+        uses: actions/upload-artifact@v4
+        with:
+          name: affiche-gotteron
+          path: output/affiche.png
+          if-no-files-found: error
+          retention-days: 14
